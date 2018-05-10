@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 from dendropy import Node,Tree
+from queue import PriorityQueue,Queue
+from warnings import warn
+UNUSED_DIAG_WARNING = "Specified diagnostic time file, but it will be ignored in this method"
 
 # get the label of Dendropy node u
 def label(u):
@@ -12,6 +15,8 @@ Node.__lt__ = node_lt
 
 # randomly pick n individuals
 def random_select(tree,diag,n):
+    if diag is not None:
+        warn(UNUSED_DIAG_WARNING)
     from random import shuffle
     leaves = [label(leaf) for leaf in tree.leaf_node_iter()]
     shuffle(leaves)
@@ -19,7 +24,7 @@ def random_select(tree,diag,n):
 
 # sort all (or internal) nodes by average diagnosis time and output all leaves below current node (break ties by diagnosis time)
 def average(tree,diag,n,all):
-    from queue import PriorityQueue,Queue; traverse = PriorityQueue()
+    traverse = PriorityQueue()
     for u in tree.postorder_node_iter():
         u.done = False
         if u.is_leaf():
