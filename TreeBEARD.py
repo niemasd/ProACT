@@ -1,37 +1,49 @@
 #!/usr/bin/env python3
+from dendropy import Node,Tree
+
+# get the label of Dendropy node u
+def label(u):
+    return str(u.taxon).replace("'",'')
+
+# create < operator for Dendropy Node
+def node_lt(self, other):
+    return label(self) < label(other)
+Node.__lt__ = node_lt
+
 # sort all (or internal) nodes by average diagnosis time and output all leaves below current node (break ties by diagnosis time)
 def average(tree,diag,n,all):
     from queue import PriorityQueue,Queue; traverse = PriorityQueue()
     for u in tree.postorder_node_iter():
         u.done = False
         if u.is_leaf():
-            assert u in diag, "Individual %s not in diagnostic time file" % u
-            u.leaves_below = 1; u.tot_diag = diag[u]; u.avg_diag = diag[u]
+            u_label = label(u)
+            assert u_label in diag, "Individual %s not in diagnostic time file" % u_label
+            u.leaves_below = 1; u.tot_diag = diag[u_label]; u.avg_diag = diag[u_label]
         else:
             u.leaves_below = 0.; u.tot_diag = 0.
             for c in u.child_node_iter():
                 u.leaves_below += c.leaves_below; u.tot_diag += c.tot_diag
             u.avg_diag = u.tot_diag/u.leaves_below
         if all or not u.is_leaf():
-            traverse.put((u.avg_diag,u))
+            traverse.put((-u.avg_diag,u))
     output = []
     while not traverse.empty():
-        next_avg_diag,next = traverse.get(); next.done = True
+        dummy,next = traverse.get(); next.done = True
         if next.is_leaf():
-            output.append(str(next.taxon).replace('"',''))
+            output.append(label(next))
             if len(output) == n:
                 return output
             continue
-        to_explore = Queue(); to_explore.put((diag[next],next)); pick = PriorityQueue()
+        to_explore = Queue(); to_explore.put(next); pick = PriorityQueue()
         while not to_explore.empty():
-            tmp_diag,tmp = to_explore.get(); tmp.done = True
+            tmp = to_explore.get(); tmp.done = True
             if tmp.is_leaf():
-                pick.put((tmp_diag,tmp)); continue
+                pick.put((-diag[label(tmp)],tmp)); continue
             for c in tmp.child_node_iter():
                 if not c.done:
-                    to_explore.put((diag[c],c))
+                    to_explore.put(c)
         while not pick.empty():
-            output.append(str(pick.get()[1].taxon).replace('"',''))
+            output.append(label(pick.get()[1]))
             if len(output) == n:
                 return output
     assert False, "Only found %d individuals, not specified number (%d)" % (len(output),n)
@@ -43,7 +55,7 @@ def average_internal(tree,diag,n):
 # run TreeBEARD
 METHODS = {'average_all':average_all,'average_internal':average_internal}
 if __name__ == "__main__":
-    import argparse; from gzip import open as gopen; from dendropy import Tree
+    import argparse; from gzip import open as gopen
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-t', '--tree', required=True, type=str, help="Input Tree File")
     parser.add_argument('-d', '--diagnosis', required=True, type=str, help="Input Diagnosis Time File")
@@ -65,5 +77,5 @@ if __name__ == "__main__":
         else:
             u,t = line.strip().split()
         diag[u] = float(t)
-    for u in METHODS[args.method](tree,diag,n):
+    for u in METHODS[args.method](tree,diag,args.number):
         print(u)
