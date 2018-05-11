@@ -23,7 +23,7 @@ def random_select(tree,inf,n):
     return leaves[:n]
 
 # sort all (or internal) nodes by average infection time and output all leaves below current node (break ties by infection time)
-def average(tree,inf,n,all):
+def average(tree,inf,n,sort_max,all):
     traverse = PriorityQueue()
     for u in tree.postorder_node_iter():
         u.done = False
@@ -37,7 +37,7 @@ def average(tree,inf,n,all):
                 u.leaves_below += c.leaves_below; u.tot_inf += c.tot_inf
             u.avg_inf = u.tot_inf/u.leaves_below
         if all or not u.is_leaf():
-            traverse.put((-u.avg_inf,u))
+            traverse.put(({True:-u.avg_inf,False:u.avg_inf}[sort_max],u))
     output = []
     while not traverse.empty():
         dummy,next = traverse.get(); next.done = True
@@ -50,7 +50,7 @@ def average(tree,inf,n,all):
         while not to_explore.empty():
             tmp = to_explore.get(); tmp.done = True
             if tmp.is_leaf():
-                pick.put((-inf[label(tmp)],tmp)); continue
+                pick.put(({True:-inf[label(tmp)],False:inf[label(tmp)]}[sort_max],tmp)); continue
             for c in tmp.child_node_iter():
                 if not c.done:
                     to_explore.put(c)
@@ -59,14 +59,18 @@ def average(tree,inf,n,all):
             if len(output) == n:
                 return output
     assert False, "Only found %d individuals, not specified number (%d)" % (len(output),n)
-def average_all(tree,inf,n):
-    return average(tree,inf,n,True)
-def average_internal(tree,inf,n):
-    return average(tree,inf,n,False)
+def average_max_all(tree,inf,n):
+    return average(tree,inf,n,True,True)
+def average_max_internal(tree,inf,n):
+    return average(tree,inf,n,True,False)
+def average_min_all(tree,inf,n):
+    return average(tree,inf,n,False,True)
+def average_min_internal(tree,inf,n):
+    return average(tree,inf,n,False,False)
 
 # run TreeBEARD
-METHODS = {'average_all':average_all,'average_internal':average_internal,'random':random_select}
-NEED_INFECTION = {'average_all','average_internal'}
+METHODS = {'average_max_all':average_max_all,'average_max_internal':average_max_internal,'average_min_all':average_min_all,'average_min_internal':average_min_internal,'random':random_select}
+NEED_INFECTION = {'average_max_all','average_max_internal','average_min_all','average_min_internal'}
 if __name__ == "__main__":
     import argparse; from gzip import open as gopen
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
