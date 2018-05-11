@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 from dendropy import Node,Tree
+from random import shuffle
 from queue import PriorityQueue,Queue
 from warnings import warn
-UNUSED_INF_WARNING = "Specified infection time file, but it will be ignored in this method"
+TREE_OVER_INF_WARNING = "User specified both tree and infection time files, but only tree file will be used"
+NEED_TREE_OR_INF_ERROR = "User did not specify tree nor infection time file, but one of the two is needed in this method"
+UNUSED_TREE_WARNING = "User specified tree file, but it will be ignored in this method"
+NEED_TREE_ERROR = "No tree file specified, but it is needed for this method"
+UNUSED_INF_WARNING = "User specified infection time file, but it will be ignored in this method"
+NEED_INF_ERROR = "No infection time file specified, but it is needed for this method"
 
 # get the label of Dendropy node u
 def label(u):
@@ -15,15 +21,21 @@ Node.__lt__ = node_lt
 
 # randomly pick n individuals
 def random_select(tree,inf,n):
-    if inf is not None:
-        warn(UNUSED_INF_WARNING)
-    from random import shuffle
-    leaves = [label(leaf) for leaf in tree.leaf_node_iter()]
-    shuffle(leaves)
-    return leaves[:n]
+    assert tree is not None or inf is not None, NEED_TREE_OR_INF_ERROR
+    if tree is not None and inf is not None:
+        warn(TREE_OVER_INF_WARNING)
+    if tree is not None:
+        individuals = [label(leaf) for leaf in tree.leaf_node_iter()]
+    elif inf is not None:
+        individuals = list(inf.keys())
+    shuffle(individuals)
+    return individuals[:n]
+
 
 # sort all (or internal) nodes by average infection time and output all leaves below current node (break ties by infection time)
 def average(tree,inf,n,sort_max,all):
+    assert tree is not None, NEED_TREE_ERROR
+    assert inf is not None, NEED_INF_ERROR
     traverse = PriorityQueue()
     for u in tree.postorder_node_iter():
         u.done = False
@@ -59,22 +71,38 @@ def average(tree,inf,n,sort_max,all):
             if len(output) == n:
                 return output
     assert False, "Only found %d individuals, not specified number (%d)" % (len(output),n)
-def average_max_all(tree,inf,n):
+def average_max_inf_all(tree,inf,n):
     return average(tree,inf,n,True,True)
-def average_max_internal(tree,inf,n):
+def average_max_inf_internal(tree,inf,n):
     return average(tree,inf,n,True,False)
-def average_min_all(tree,inf,n):
+def average_min_inf_all(tree,inf,n):
     return average(tree,inf,n,False,True)
-def average_min_internal(tree,inf,n):
+def average_min_inf_internal(tree,inf,n):
     return average(tree,inf,n,False,False)
 
+# sort all individuals by infection time
+def sort_by_inf(tree,inf,n,sort_max):
+    if tree is not None:
+        warn(UNUSED_TREE_WARNING)
+    return [e[0] for e in sorted(inf.items(), key=lambda k: (k[1],k[0]), reverse=sort_max)[:n]]
+def max_inf(tree,inf,n):
+    return sort_by_inf(tree,inf,n,True)
+def min_inf(tree,inf,n):
+    return sort_by_inf(tree,inf,n,False)
+
 # run TreeBEARD
-METHODS = {'average_max_all':average_max_all,'average_max_internal':average_max_internal,'average_min_all':average_min_all,'average_min_internal':average_min_internal,'random':random_select}
-NEED_INFECTION = {'average_max_all','average_max_internal','average_min_all','average_min_internal'}
+METHODS = {
+    'average_max_inf_all':average_max_inf_all,
+    'average_max_inf_internal':average_max_inf_internal,
+    'average_min_inf_all':average_min_inf_all,
+    'average_min_inf_internal':average_min_inf_internal,
+    'max_inf':max_inf,
+    'min_inf':min_inf,
+    'random':random_select}
 if __name__ == "__main__":
     import argparse; from gzip import open as gopen
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-t', '--tree', required=True, type=str, help="Input Tree File")
+    parser.add_argument('-t', '--tree', required=False, type=str, default=None, help="Input Tree File")
     parser.add_argument('-i', '--infection', required=False, type=str, default=None, help="Input Infection Time File")
     parser.add_argument('-m', '--method', required=True, type=str, help="Method (%s)" % ', '.join(sorted(METHODS.keys())))
     parser.add_argument('-n', '--number', required=True, type=int, help="Number of Individuals")
@@ -83,7 +111,6 @@ if __name__ == "__main__":
     args.method = args.method.lower()
     assert args.method in METHODS, "Invalid method: %s. Options: %s" % (args.method, ', '.join(sorted(METHODS.keys())))
     if args.infection is None:
-        assert args.method not in NEED_INFECTION, "Method %s requires infection file" % args.method
         inf = None
     else:
         inf = {}
@@ -93,11 +120,14 @@ if __name__ == "__main__":
             else:
                 u,t = line.strip().split()
             inf[u] = float(t)
-    if args.tree.lower().endswith('.gz'):
-        tree = Tree.get(data=gopen(args.tree).read().decode(),schema='newick')
+    if args.tree is None:
+        tree = None
     else:
-        tree = Tree.get(data=open(args.tree).read(),schema='newick')
-    num_leaves = len(tree.leaf_nodes())
-    assert args.number < num_leaves, "Number of output individuals (%d) must be less than total number of individuals in tree (%d)" % (args.number,num_leaves)
+        if args.tree.lower().endswith('.gz'):
+            tree = Tree.get(data=gopen(args.tree).read().decode(),schema='newick')
+        else:
+            tree = Tree.get(data=open(args.tree).read(),schema='newick')
+        num_leaves = len(tree.leaf_nodes())
+        assert args.number < num_leaves, "Number of output individuals (%d) must be less than total number of individuals in tree (%d)" % (args.number,num_leaves)
     for u in METHODS[args.method](tree,inf,args.number):
         print(u)
