@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from dendropy import Node,Tree
+from treeswift import read_tree_newick,Node
 from random import shuffle
 from queue import PriorityQueue,Queue
 from warnings import warn
@@ -10,13 +10,9 @@ NEED_TREE_ERROR = "No tree file specified, but it is needed for this method"
 UNUSED_INF_WARNING = "User specified infection time file, but it will be ignored in this method"
 NEED_INF_ERROR = "No infection time file specified, but it is needed for this method"
 
-# get the label of Dendropy node u
-def label(u):
-    return str(u.taxon).replace("'",'')
-
-# create < operator for Dendropy Node
+# create < operator for TreeSwift Node
 def node_lt(self, other):
-    return label(self) < label(other)
+    return str(self) < str(other)
 Node.__lt__ = node_lt
 
 # randomly pick n individuals
@@ -25,7 +21,7 @@ def random_select(tree,inf,n):
     if tree is not None and inf is not None:
         warn(TREE_OVER_INF_WARNING)
     if tree is not None:
-        individuals = [label(leaf) for leaf in tree.leaf_node_iter()]
+        individuals = [str(leaf) for leaf in tree.traverse_leaves()]
     elif inf is not None:
         individuals = list(inf.keys())
     shuffle(individuals)
@@ -37,15 +33,14 @@ def average(tree,inf,n,sort_max,all):
     assert tree is not None, NEED_TREE_ERROR
     assert inf is not None, NEED_INF_ERROR
     traverse = PriorityQueue()
-    for u in tree.postorder_node_iter():
+    for u in tree.traverse_postorder():
         u.done = False
         if u.is_leaf():
-            u_label = label(u)
-            assert u_label in inf, "Individual %s not in infection time file" % u_label
-            u.leaves_below = 1; u.tot_inf = inf[u_label]; u.avg_inf = inf[u_label]
+            assert str(u) in inf, "Individual %s not in infection time file" % str(u)
+            u.leaves_below = 1; u.tot_inf = inf[str(u)]; u.avg_inf = inf[str(u)]
         else:
             u.leaves_below = 0.; u.tot_inf = 0.
-            for c in u.child_node_iter():
+            for c in u.children:
                 u.leaves_below += c.leaves_below; u.tot_inf += c.tot_inf
             u.avg_inf = u.tot_inf/u.leaves_below
         if all or not u.is_leaf():
@@ -54,7 +49,7 @@ def average(tree,inf,n,sort_max,all):
     while not traverse.empty():
         dummy,next = traverse.get(); next.done = True
         if next.is_leaf():
-            output.append(label(next))
+            output.append(str(next))
             if len(output) == n:
                 return output
             continue
@@ -62,12 +57,12 @@ def average(tree,inf,n,sort_max,all):
         while not to_explore.empty():
             tmp = to_explore.get(); tmp.done = True
             if tmp.is_leaf():
-                pick.put(({True:-inf[label(tmp)],False:inf[label(tmp)]}[sort_max],tmp)); continue
-            for c in tmp.child_node_iter():
+                pick.put(({True:-inf[str(tmp)],False:inf[str(tmp)]}[sort_max],tmp)); continue
+            for c in tmp.children:
                 if not c.done:
                     to_explore.put(c)
         while not pick.empty():
-            output.append(label(pick.get()[1]))
+            output.append(str(pick.get()[1]))
             if len(output) == n:
                 return output
     assert False, "Only found %d individuals, not specified number (%d)" % (len(output),n)
@@ -124,10 +119,10 @@ if __name__ == "__main__":
         tree = None
     else:
         if args.tree.lower().endswith('.gz'):
-            tree = Tree.get(data=gopen(args.tree).read().decode(),schema='newick')
+            tree = read_tree_newick(gopen(args.tree).read().decode())
         else:
-            tree = Tree.get(data=open(args.tree).read(),schema='newick')
-        num_leaves = len(tree.leaf_nodes())
+            tree = read_tree_newick(open(args.tree).read())
+        num_leaves = len([l for l in tree.traverse_leaves()])
         assert args.number < num_leaves, "Number of output individuals (%d) must be less than total number of individuals in tree (%d)" % (args.number,num_leaves)
     for u in METHODS[args.method](tree,inf,args.number):
         print(u)
