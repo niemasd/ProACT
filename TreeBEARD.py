@@ -3,8 +3,9 @@ from treeswift import read_tree_newick,Node
 from random import shuffle
 from queue import PriorityQueue,Queue
 from warnings import warn
-TREE_OVER_INF_WARNING = "User specified both tree and infection time files, but only tree file will be used"
-NEED_TREE_OR_INF_ERROR = "User did not specify tree nor infection time file, but one of the two is needed in this method"
+USE_TREE_WARNING = "Only tree file will be used"
+USE_INF_WARNING = "Only infection time file will be used"
+NEED_TREE_INF_ERROR = "User did not specify tree nor infection time file, but one of the two is needed in this method"
 UNUSED_TREE_WARNING = "User specified tree file, but it will be ignored in this method"
 NEED_TREE_ERROR = "No tree file specified, but it is needed for this method"
 UNUSED_INF_WARNING = "User specified infection time file, but it will be ignored in this method"
@@ -17,9 +18,9 @@ Node.__lt__ = node_lt
 
 # randomly pick n individuals
 def random_select(tree,inf,n):
-    assert tree is not None or inf is not None, NEED_TREE_OR_INF_ERROR
+    assert tree is not None or inf is not None, NEED_TREE_INF_ERROR
     if tree is not None and inf is not None:
-        warn(TREE_OVER_INF_WARNING)
+        warn(USE_TREE_WARNING)
     if tree is not None:
         individuals = [str(leaf) for leaf in tree.traverse_leaves()]
     elif inf is not None:
@@ -101,10 +102,15 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--infection', required=False, type=str, default=None, help="Input Infection Time File")
     parser.add_argument('-m', '--method', required=True, type=str, help="Method (%s)" % ', '.join(sorted(METHODS.keys())))
     parser.add_argument('-n', '--number', required=True, type=int, help="Number of Individuals")
+    parser.add_argument('-o', '--output', required=False, type=str, default='stdout', help="Output File")
     args = parser.parse_args()
     assert args.number > 0, "Number of individuals must be a positive integer"
     args.method = args.method.lower()
     assert args.method in METHODS, "Invalid method: %s. Options: %s" % (args.method, ', '.join(sorted(METHODS.keys())))
+    if args.output == 'stdout':
+        from sys import stdout; output = stdout
+    else:
+        output = open(args.output,'w')
     if args.infection is None:
         inf = None
     else:
@@ -125,4 +131,4 @@ if __name__ == "__main__":
         num_leaves = len([l for l in tree.traverse_leaves()])
         assert args.number < num_leaves, "Number of output individuals (%d) must be less than total number of individuals in tree (%d)" % (args.number,num_leaves)
     for u in METHODS[args.method](tree,inf,args.number):
-        print(u)
+        output.write(u); output.write('\n')
