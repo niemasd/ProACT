@@ -11,11 +11,6 @@ NEED_TREE_ERROR = "No tree file specified, but it is needed for this method"
 UNUSED_INF_WARNING = "User specified infection time file, but it will be ignored in this method"
 NEED_INF_ERROR = "No infection time file specified, but it is needed for this method"
 
-# create < operator for TreeSwift Node
-def node_lt(self, other):
-    return str(self) < str(other)
-Node.__lt__ = node_lt
-
 # randomly pick n individuals
 def random_select(tree,inf,n):
     assert tree is not None or inf is not None, NEED_TREE_INF_ERROR
