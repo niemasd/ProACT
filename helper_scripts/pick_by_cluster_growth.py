@@ -41,8 +41,8 @@ if __name__ == "__main__":
             c,g = line.decode().strip().split()
         else:
             c,g = line.strip().split()
-        if c == 'Cluster' and g == 'GrowthRate':
+        if c.startswith('Cluster') and g.startswith('GrowthRate'):
             continue
         growth[c] = float(g)
-    for g,u in sorted([(growth[cluster[u]],u) for u in cluster], reverse=True)[:args.number]:
+    for g,u in sorted([(growth[cluster[u]],u) for u in cluster if cluster[u] in growth], reverse=True)[:args.number]:
         output.write('%s\n'%u)
