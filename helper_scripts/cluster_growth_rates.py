@@ -42,5 +42,5 @@ if __name__ == "__main__":
     output.write('Cluster\tGrowthRate\n')
     for c in n['c2']:
         if c not in n['c1']:
-            n['c1'][c] = 1 # pseudocount
+            n['c1'][c] = 0
         output.write('%s\t%f\n'%(c,growth(n['c1'][c],n['c2'][c])))
