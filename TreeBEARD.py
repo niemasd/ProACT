@@ -23,7 +23,6 @@ def random_select(tree,inf,n):
     shuffle(individuals)
     return individuals[:n]
 
-
 # sort all (or internal) nodes by average infection time and output all leaves below current node (break ties by infection time)
 def average(tree,inf,n,sort_max,all):
     assert tree is not None, NEED_TREE_ERROR
@@ -81,6 +80,16 @@ def max_inf(tree,inf,n):
 def min_inf(tree,inf,n):
     return sort_by_inf(tree,inf,n,False)
 
+# sort all individuals by distance from root
+def sort_by_root_dist(tree,inf,n,sort_max):
+    if inf is not None:
+        warn(UNUSED_INF_WARNING)
+    return [str(l[1]) for l in tree.traverse_rootdistorder(ascending=sort_max) if l[1].is_leaf()][:n]
+def max_root_dist(tree,inf,n):
+    return sort_by_root_dist(tree,inf,n,False)
+def min_root_dist(tree,inf,n):
+    return sort_by_root_dist(tree,inf,n,True)
+
 # run TreeBEARD
 METHODS = {
     'average_max_inf_all':average_max_inf_all,
@@ -89,6 +98,8 @@ METHODS = {
     'average_min_inf_internal':average_min_inf_internal,
     'max_inf':max_inf,
     'min_inf':min_inf,
+    'max_root_dist':max_root_dist,
+    'min_root_dist':min_root_dist,
     'random':random_select}
 if __name__ == "__main__":
     import argparse; from gzip import open as gopen
