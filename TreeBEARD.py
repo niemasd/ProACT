@@ -4,12 +4,12 @@ from random import shuffle
 from queue import PriorityQueue,Queue
 from warnings import warn
 USE_TREE_WARNING = "Only tree file will be used"
-USE_INF_WARNING = "Only infection time file will be used"
-NEED_TREE_INF_ERROR = "User did not specify tree nor infection time file, but one of the two is needed in this method"
+USE_INF_WARNING = "Only diagnosis time file will be used"
+NEED_TREE_INF_ERROR = "User did not specify tree nor diagnosis time file, but one of the two is needed in this method"
 UNUSED_TREE_WARNING = "User specified tree file, but it will be ignored in this method"
 NEED_TREE_ERROR = "No tree file specified, but it is needed for this method"
-UNUSED_INF_WARNING = "User specified infection time file, but it will be ignored in this method"
-NEED_INF_ERROR = "No infection time file specified, but it is needed for this method"
+UNUSED_INF_WARNING = "User specified diagnosis time file, but it will be ignored in this method"
+NEED_INF_ERROR = "No diagnosis time file specified, but it is needed for this method"
 
 # randomly pick n individuals
 def random_select(tree,inf,n):
@@ -23,7 +23,7 @@ def random_select(tree,inf,n):
     shuffle(individuals)
     return individuals[:n]
 
-# sort all (or internal) nodes by average infection time and output all leaves below current node (break ties by infection time)
+# sort all (or internal) nodes by average diagnosis time and output all leaves below current node (break ties by diagnosis time)
 def average(tree,inf,n,sort_max,all):
     assert tree is not None, NEED_TREE_ERROR
     assert inf is not None, NEED_INF_ERROR
@@ -31,7 +31,7 @@ def average(tree,inf,n,sort_max,all):
     for u in tree.traverse_postorder():
         u.done = False
         if u.is_leaf():
-            assert str(u) in inf, "Individual %s not in infection time file" % str(u)
+            assert str(u) in inf, "Individual %s not in diagnosis time file" % str(u)
             u.leaves_below = 1; u.tot_inf = inf[str(u)]; u.avg_inf = inf[str(u)]
         else:
             u.leaves_below = 0.; u.tot_inf = 0.
@@ -70,7 +70,7 @@ def average_min_inf_all(tree,inf,n):
 def average_min_inf_internal(tree,inf,n):
     return average(tree,inf,n,False,False)
 
-# sort all individuals by infection time
+# sort all individuals by diagnosis time
 def sort_by_inf(tree,inf,n,sort_max):
     if tree is not None:
         warn(UNUSED_TREE_WARNING)
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     import argparse; from gzip import open as gopen
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-t', '--tree', required=False, type=str, default=None, help="Input Tree File")
-    parser.add_argument('-i', '--infection', required=False, type=str, default=None, help="Input Infection Time File")
+    parser.add_argument('-d', '--diagnosis', required=False, type=str, default=None, help="Input Diagnosis Time File")
     parser.add_argument('-m', '--method', required=True, type=str, help="Method (%s)" % ', '.join(sorted(METHODS.keys())))
     parser.add_argument('-n', '--number', required=True, type=int, help="Number of Individuals")
     parser.add_argument('-o', '--output', required=False, type=str, default='stdout', help="Output File")
@@ -117,11 +117,11 @@ if __name__ == "__main__":
         from sys import stdout; output = stdout
     else:
         output = open(args.output,'w')
-    if args.infection is None:
+    if args.diagnosis is None:
         inf = None
     else:
         inf = {}
-        for line in {True:gopen(args.infection),False:open(args.infection)}[args.infection.lower().endswith('.gz')]:
+        for line in {True:gopen(args.diagnosis),False:open(args.diagnosis)}[args.diagnosis.lower().endswith('.gz')]:
             if isinstance(line,bytes):
                 u,t = line.decode().strip().split()
             else:
