@@ -106,7 +106,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-t', '--tree', required=False, type=str, default=None, help="Input Tree File")
     parser.add_argument('-d', '--diagnosis', required=False, type=str, default=None, help="Input Diagnosis Time File")
-    parser.add_argument('-m', '--method', required=True, type=str, help="Method (%s)" % ', '.join(sorted(METHODS.keys())))
+    parser.add_argument('-m', '--method', required=False, type=str, default='average_max_inf_internal', help="Method (%s)" % ', '.join(sorted(METHODS.keys())))
     parser.add_argument('-n', '--number', required=True, type=int, help="Number of Individuals")
     parser.add_argument('-o', '--output', required=False, type=str, default='stdout', help="Output File")
     args = parser.parse_args()
