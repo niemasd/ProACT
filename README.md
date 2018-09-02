@@ -1,2 +1,2 @@
-# TreeBEARD
-Tree-Based Epidemiological AntiRetroviral Distribution
+# PhyPIE
+Phylogenetic approach to Picking Individuals for Epidemiological intervention
