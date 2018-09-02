@@ -90,7 +90,7 @@ def max_root_dist(tree,inf,n):
 def min_root_dist(tree,inf,n):
     return sort_by_root_dist(tree,inf,n,True)
 
-# run TreeBEARD
+# run PhyPIE
 METHODS = {
     'average_max_inf_all':average_max_inf_all,
     'average_max_inf_internal':average_max_inf_internal,
