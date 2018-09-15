@@ -23,10 +23,11 @@ if __name__ == "__main__":
         gf = gopen(args.growth)
     else:
         gf = open(args.growth)
-    if args.diagnosis.lower().endswith('.gz'):
-        df = gopen(args.diagnosis)
-    else:
-        df = open(args.diagnosis)
+    if args.diagnosis is not None:
+        if args.diagnosis.lower().endswith('.gz'):
+            df = gopen(args.diagnosis)
+        else:
+            df = open(args.diagnosis)
     if args.output == 'stdout':
         from sys import stdout; output = stdout
     else:
