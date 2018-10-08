@@ -10,6 +10,7 @@ UNUSED_TREE_WARNING = "User specified tree file, but it will be ignored in this 
 NEED_TREE_ERROR = "No tree file specified, but it is needed for this method"
 UNUSED_INF_WARNING = "User specified diagnosis time file, but it will be ignored in this method"
 NEED_INF_ERROR = "No diagnosis time file specified, but it is needed for this method"
+INVALID_DATE = "Invalid date. Dates must be floats/integers"
 
 # randomly pick n individuals
 def random_select(tree,inf,n):
@@ -126,7 +127,10 @@ if __name__ == "__main__":
                 u,t = line.decode().strip().split()
             else:
                 u,t = line.strip().split()
-            inf[u] = float(t)
+            try:
+                inf[u] = float(t)
+            except ValueError:
+                raise ValueError(INVALID_DATE)
     if args.tree is None:
         tree = None
     else:
