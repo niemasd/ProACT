@@ -1,2 +1,2 @@
-# PhyPIE
-Phylogenetic approach to Picking Individuals for Epidemiological intervention
+# ProACT
+Prioritization using Average Clade Times
