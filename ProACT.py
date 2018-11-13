@@ -139,6 +139,6 @@ if __name__ == "__main__":
         else:
             tree = read_tree_newick(open(args.tree).read())
         num_leaves = len([l for l in tree.traverse_leaves()])
-        assert args.number < num_leaves, "Number of output individuals (%d) must be less than total number of individuals in tree (%d)" % (args.number,num_leaves)
+        assert args.number <= num_leaves, "Number of output individuals (%d) must be less than or equal to total number of individuals in tree (%d)" % (args.number,num_leaves)
     for u in METHODS[args.method](tree,inf,args.number):
         output.write(u); output.write('\n')
