@@ -108,9 +108,10 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--tree', required=False, type=str, default=None, help="Input Tree File")
     parser.add_argument('-d', '--diagnosis', required=False, type=str, default=None, help="Input Diagnosis Time File")
     parser.add_argument('-m', '--method', required=False, type=str, default='average_max_inf_internal', help="Method (%s)" % ', '.join(sorted(METHODS.keys())))
-    parser.add_argument('-n', '--number', required=True, type=int, help="Number of Individuals")
+    parser.add_argument('-n', '--number', required=False, type=str, default='All', help="Number of Individuals")
     parser.add_argument('-o', '--output', required=False, type=str, default='stdout', help="Output File")
     args = parser.parse_args()
+
     assert args.number > 0, "Number of individuals must be a positive integer"
     args.method = args.method.lower()
     assert args.method in METHODS, "Invalid method: %s. Options: %s" % (args.method, ', '.join(sorted(METHODS.keys())))
@@ -133,12 +134,20 @@ if __name__ == "__main__":
                 raise ValueError(INVALID_DATE)
     if args.tree is None:
         tree = None
+        if args.number == 'All':
+            args.number = len(inf)
+        else:
+            args.number = int(args.number)
     else:
         if args.tree.lower().endswith('.gz'):
             tree = read_tree_newick(gopen(args.tree).read().decode())
         else:
             tree = read_tree_newick(open(args.tree).read())
         num_leaves = len([l for l in tree.traverse_leaves()])
-        assert args.number <= num_leaves, "Number of output individuals (%d) must be less than or equal to total number of individuals in tree (%d)" % (args.number,num_leaves)
+        if args.number == 'All':
+            args.number = num_leaves
+        else:
+            args.number = int(args.number)
+        assert 0 < args.number <= num_leaves, "Number of output individuals (%d) must be less than or equal to total number of individuals in tree (%d)" % (args.number,num_leaves)
     for u in METHODS[args.method](tree,inf,args.number):
         output.write(u); output.write('\n')
