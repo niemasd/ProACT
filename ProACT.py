@@ -111,8 +111,6 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--number', required=False, type=str, default='All', help="Number of Individuals")
     parser.add_argument('-o', '--output', required=False, type=str, default='stdout', help="Output File")
     args = parser.parse_args()
-
-    assert args.number > 0, "Number of individuals must be a positive integer"
     args.method = args.method.lower()
     assert args.method in METHODS, "Invalid method: %s. Options: %s" % (args.method, ', '.join(sorted(METHODS.keys())))
     if args.output == 'stdout':
