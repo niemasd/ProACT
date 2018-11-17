@@ -113,6 +113,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     args.method = args.method.lower()
     assert args.method in METHODS, "Invalid method: %s. Options: %s" % (args.method, ', '.join(sorted(METHODS.keys())))
+    assert args.diagnosis is not None or args.tree is not None, "Must specify either tree file or diagnosis time file (or both)"
     if args.output == 'stdout':
         from sys import stdout; output = stdout
     else:
