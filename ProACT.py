@@ -43,7 +43,7 @@ def feedback(tree,inf,n):
                 u.num += c.num; u.den += c.den
             u.tup = [-1*u.num/u.den, u]; pq.append(u.tup)
     heapq.heapify(pq)
-    while len(pq) != 0:
+    while len(pq) != 0 and len(output) < n:
         u = heapq.heappop(pq)[1]
         if u.done:
             continue
@@ -61,7 +61,7 @@ def feedback(tree,inf,n):
         for u in to_fix:
             u.tup = [-1*u.num/u.den, u]
         heapq.heapify(pq)
-    return output
+    return output[:n]
 
 # sort all (or internal) nodes by average diagnosis time and output all leaves below current node (break ties by diagnosis time)
 def average(tree,inf,n,sort_max,all):
