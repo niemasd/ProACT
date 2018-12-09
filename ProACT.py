@@ -3,6 +3,7 @@ from treeswift import read_tree_newick,Node
 from random import shuffle
 from queue import PriorityQueue,Queue
 from warnings import warn
+import heapq
 USE_TREE_WARNING = "Only tree file will be used"
 USE_INF_WARNING = "Only diagnosis time file will be used"
 NEED_TREE_INF_ERROR = "User did not specify tree nor diagnosis time file, but one of the two is needed in this method"
@@ -24,6 +25,44 @@ def random_select(tree,inf,n):
     shuffle(individuals)
     return individuals[:n]
 
+# feedback mode
+def feedback(tree,inf,n):
+    assert tree is not None, NEED_TREE_ERROR
+    assert inf is not None, NEED_INF_ERROR
+    pq = list(); output = list()
+    for u in tree.traverse_postorder():
+        u.done = False
+        if u.is_leaf():
+            if str(u) not in inf:
+                warn("Individual %s not in diagnosis time file, so assuming diagnosis time = infinity" % str(u))
+                inf[str(u)] = float('inf')
+            u.num = inf[str(u)]; u.den = 1.
+        else:
+            u.num = 0.; u.den = 0.
+            for c in u.children:
+                u.num += c.num; u.den += c.den
+            u.tup = [-1*u.num/u.den, u]; pq.append(u.tup)
+    heapq.heapify(pq)
+    while len(pq) != 0:
+        u = heapq.heappop(pq)[1]
+        if u.done:
+            continue
+        leaves_below = list()
+        for d in u.traverse_preorder():
+            d.done = True
+            if d.is_leaf():
+                leaves_below.append((-1*inf[str(d)],d))
+        leaves_below.sort()
+        to_fix = set()
+        for DUMMY,u in leaves_below:
+            output.append(str(u))
+            for a in u.traverse_ancestors(include_self=False):
+                to_fix.add(u); a.num -= u.num; a.den -= 1.
+        for u in to_fix:
+            u.tup = [-1*u.num/u.den, u]
+        heapq.heapify(pq)
+    return output
+
 # sort all (or internal) nodes by average diagnosis time and output all leaves below current node (break ties by diagnosis time)
 def average(tree,inf,n,sort_max,all):
     assert tree is not None, NEED_TREE_ERROR
@@ -32,7 +71,9 @@ def average(tree,inf,n,sort_max,all):
     for u in tree.traverse_postorder():
         u.done = False
         if u.is_leaf():
-            assert str(u) in inf, "Individual %s not in diagnosis time file" % str(u)
+            if str(u) not in inf:
+                warn("Individual %s not in diagnosis time file, so assuming diagnosis time = infinity" % str(u))
+                inf[str(u)] = float('inf')
             u.leaves_below = 1; u.tot_inf = inf[str(u)]; u.avg_inf = inf[str(u)]
         else:
             u.leaves_below = 0.; u.tot_inf = 0.
@@ -97,6 +138,7 @@ METHODS = {
     'average_max_inf_internal':average_max_inf_internal,
     'average_min_inf_all':average_min_inf_all,
     'average_min_inf_internal':average_min_inf_internal,
+    'feedback':feedback,
     'max_inf':max_inf,
     'min_inf':min_inf,
     'max_root_dist':max_root_dist,
