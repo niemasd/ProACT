@@ -11,10 +11,9 @@ if __name__ == "__main__":
     parser.add_argument('-g', '--growth', required=True, type=str, help="Input Growth Rate File")
     parser.add_argument('-d', '--diagnosis', required=False, type=str, default=None, help="Diagnosis File")
     parser.add_argument('-t', '--picktime', required=False, type=float, default=None, help="Pick Time")
-    parser.add_argument('-n', '--number', required=True, type=int, help="Number of Individuals")
+    parser.add_argument('-n', '--number', required=False, type=str, default='All', help="Number of Individuals")
     parser.add_argument('-o', '--output', required=False, type=str, default='stdout', help="Output File")
     args = parser.parse_args()
-    assert args.number > 0, "Number of individuals must be a positive integer"
     if args.clustering.lower().endswith('.gz'):
         cf = gopen(args.clustering)
     else:
@@ -32,7 +31,7 @@ if __name__ == "__main__":
         from sys import stdout; output = stdout
     else:
         output = open(args.output,'w')
-    cluster = {}
+    cluster = {}; num_people = 0
     for line in cf:
         if isinstance(line,bytes):
             u,c = line.decode().strip().split()
@@ -40,7 +39,10 @@ if __name__ == "__main__":
             u,c = line.strip().split()
         if u == 'SequenceName':
             continue
-        cluster[u] = c
+        cluster[u] = c; num_people += 1
+    if args.number == 'All':
+        args.number = num_people
+    assert args.number > 0, "Number of individuals must be a positive integer"
     if args.number > len(cluster):
         assert args.diagnosis is not None, "Number of output individuals (%d) is greater than the total number of individuals (%d), so must specify diagnosis file" % (args.number, len(cluster))
         assert args.picktime is not None, "Number of output individuals (%d) is greater than the total number of individuals (%d), so must specify pick time" % (args.number, len(cluster))
