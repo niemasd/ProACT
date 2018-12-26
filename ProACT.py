@@ -29,7 +29,7 @@ def random_select(tree,inf,n):
 def feedback(tree,inf,n):
     assert tree is not None, NEED_TREE_ERROR
     assert inf is not None, NEED_INF_ERROR
-    pq = list(); output = list()
+    pq = list(); output = list(); outset = set()
     for u in tree.traverse_postorder():
         u.done = False
         if u.is_leaf():
@@ -55,7 +55,9 @@ def feedback(tree,inf,n):
         leaves_below.sort()
         to_fix = set()
         for DUMMY,u in leaves_below:
-            output.append(str(u))
+            ustr = str(u)
+            if ustr not in outset:
+                output.append(ustr); outset.add(ustr)
             for a in u.traverse_ancestors(include_self=False):
                 to_fix.add(u); a.num -= u.num; a.den -= 1.
         for u in to_fix:
@@ -82,11 +84,13 @@ def average(tree,inf,n,sort_max,all):
             u.avg_inf = u.tot_inf/u.leaves_below
         if all or not u.is_leaf():
             traverse.put(({True:-u.avg_inf,False:u.avg_inf}[sort_max],u))
-    output = []
+    output = list(); outset = set()
     while not traverse.empty():
         dummy,next = traverse.get(); next.done = True
         if next.is_leaf():
-            output.append(str(next))
+            nextstr = str(next)
+            if nextstr not in outset:
+                output.append(nextstr); outset.add(nextstr)
             if len(output) == n:
                 return output
             continue
@@ -99,7 +103,9 @@ def average(tree,inf,n,sort_max,all):
                 if not c.done:
                     to_explore.put(c)
         while not pick.empty():
-            output.append(str(pick.get()[1]))
+            ustr = str(pick.get()[1])
+            if ustr not in outset:
+                output.append(ustr); outset.add(ustr)
             if len(output) == n:
                 return output
     assert False, "Only found %d individuals, not specified number (%d)" % (len(output),n)
