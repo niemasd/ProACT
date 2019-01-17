@@ -42,6 +42,8 @@ if __name__ == "__main__":
         cluster[u] = c; num_people += 1
     if args.number == 'All':
         args.number = num_people
+    else:
+        args.number = int(args.number)
     assert args.number > 0, "Number of individuals must be a positive integer"
     if args.number > len(cluster):
         assert args.diagnosis is not None, "Number of output individuals (%d) is greater than the total number of individuals (%d), so must specify diagnosis file" % (args.number, len(cluster))
