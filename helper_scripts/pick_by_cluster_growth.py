@@ -50,7 +50,6 @@ if __name__ == "__main__":
     if args.number > len(cluster):
         assert args.diagnosis is not None, "Number of output individuals (%d) is greater than the total number of individuals (%d), so must specify diagnosis file" % (args.number, len(cluster))
         warn("Number of output individuals (%d) is greater than the total number of individuals (%d), so the remaining %d individuals will be randomly selected from the diagnosis file (%s)." % (args.number, len(cluster), args.number-len(cluster), args.diagnosis))
-    from sys import stderr; stderr.write(str(len(everybody))); stderr.write('\n')
     growth = {}
     for line in gf:
         if isinstance(line,bytes):
