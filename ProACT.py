@@ -61,7 +61,8 @@ def feedback(tree,inf,n):
             for a in u.traverse_ancestors(include_self=False):
                 to_fix.add(u); a.num -= u.num; a.den -= 1.
         for u in to_fix:
-            u.tup = [-1*u.num/u.den, u]
+            if not u.is_leaf():
+                u.tup[0] = -1*u.num/u.den
         heapq.heapify(pq)
     return output[:n]
 
