@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+from numpy import gradient
 from treeswift import read_tree_newick,Node
 from random import shuffle
 from queue import PriorityQueue,Queue
+from scipy.stats import norm
 from warnings import warn
 import heapq
 USE_TREE_WARNING = "Only tree file will be used"
@@ -12,6 +14,58 @@ NEED_TREE_ERROR = "No tree file specified, but it is needed for this method"
 UNUSED_INF_WARNING = "User specified diagnosis time file, but it will be ignored in this method"
 NEED_INF_ERROR = "No diagnosis time file specified, but it is needed for this method"
 INVALID_DATE = "Invalid date. Dates must be floats/integers"
+
+# test
+def test(tree,inf,n):
+    THRESH = 0.015
+    assert tree is not None, NEED_TREE_ERROR
+    assert inf is not None, NEED_INF_ERROR
+    leaves_old_to_new = sorted(list(tree.traverse_leaves()), key=lambda x:inf[x.label])
+    num_links = dict()
+    for leaf in leaves_old_to_new:
+        t = inf[leaf.label]; num_links[leaf] = [[t,0]]
+        visited = set(); to_explore = Queue(); to_explore.put((0,leaf))
+        while not to_explore.empty():
+            dist,curr = to_explore.get(); visited.add(curr)
+            if curr.is_leaf() and curr in num_links and curr != leaf:
+                num_links[leaf][-1][1] += 1
+                if num_links[curr][-1][0] != t:
+                    num_links[curr].append([t,num_links[curr][-1][1]])
+                num_links[curr][-1][1] += 1
+            if curr.parent is not None and curr.parent not in visited and dist + curr.edge_length <= THRESH:
+                to_explore.put((dist+curr.edge_length,curr.parent))
+            for c in curr.children:
+                if c not in visited and dist + c.edge_length <= THRESH:
+                    to_explore.put((dist+c.edge_length,c))
+    grad = dict()
+    for leaf in leaves_old_to_new:
+        if len(num_links[leaf]) == 1:
+            grad[leaf] = 0
+        else:
+            grad[leaf] = (num_links[leaf][-1][1]-num_links[leaf][-2][1]) / (num_links[leaf][-1][0]-num_links[leaf][-2][0])
+    return [l.label for l in sorted(leaves_old_to_new, key=lambda x: grad[x], reverse=True)[:n]]
+
+# sort by average time delta between you and your sibling's leaf descendants
+def average_delta(tree,inf,n):
+    assert tree is not None, NEED_TREE_ERROR
+    assert inf is not None, NEED_INF_ERROR
+    leaves = list()
+    for node in tree.traverse_postorder():
+        if node.is_leaf():
+            node.num_leaves = 1; node.tot_time = inf[node.label]; leaves.append(node)
+        else:
+            node.num_leaves = sum(c.num_leaves for c in node.children)
+            node.tot_time = sum(c.tot_time for c in node.children)
+    for leaf in leaves:
+        tot_sibling_leaves = 0; tot_sibling_time = 0.
+        for sibling in leaf.parent.children:
+            if sibling == leaf:
+                continue
+            tot_sibling_leaves += sibling.num_leaves
+            tot_sibling_time += sibling.tot_time
+            leaf.score = inf[leaf.label] - tot_sibling_time/tot_sibling_leaves
+    leaves.sort(key=lambda x: x.score)
+    return [l.label for l in leaves[:n]]
 
 # randomly pick n individuals
 def random_select(tree,inf,n):
@@ -141,6 +195,8 @@ def min_root_dist(tree,inf,n):
 
 # run ProACT
 METHODS = {
+    'DEFAULT': 'test',
+    'average_delta':average_delta,
     'average_max_inf_all':average_max_inf_all,
     'average_max_inf_internal':average_max_inf_internal,
     'average_min_inf_all':average_min_inf_all,
@@ -150,13 +206,15 @@ METHODS = {
     'min_inf':min_inf,
     'max_root_dist':max_root_dist,
     'min_root_dist':min_root_dist,
-    'random':random_select}
+    'random':random_select,
+    'test':test
+}
 if __name__ == "__main__":
     import argparse; from gzip import open as gopen
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-t', '--tree', required=False, type=str, default=None, help="Input Tree File")
     parser.add_argument('-d', '--diagnosis', required=False, type=str, default=None, help="Input Diagnosis Time File")
-    parser.add_argument('-m', '--method', required=False, type=str, default='average_max_inf_internal', help="Method (%s)" % ', '.join(sorted(METHODS.keys())))
+    parser.add_argument('-m', '--method', required=False, type=str, default=METHODS['DEFAULT'], help="Method (%s)" % ', '.join(sorted(METHODS.keys())))
     parser.add_argument('-n', '--number', required=False, type=str, default='All', help="Number of Individuals")
     parser.add_argument('-o', '--output', required=False, type=str, default='stdout', help="Output File")
     args = parser.parse_args()
