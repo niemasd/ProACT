@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from collections import deque
 from numpy import gradient
 from treeswift import read_tree_newick,Node
 from random import shuffle
@@ -15,8 +16,41 @@ UNUSED_INF_WARNING = "User specified diagnosis time file, but it will be ignored
 NEED_INF_ERROR = "No diagnosis time file specified, but it is needed for this method"
 INVALID_DATE = "Invalid date. Dates must be floats/integers"
 
-# test
+# new test
 def test(tree,inf,n):
+    THRESH = 0.018
+    assert tree is not None, NEED_TREE_ERROR
+    assert inf is not None, NEED_INF_ERROR
+    leaves = sorted(list(tree.traverse_leaves()), key=lambda x:inf[x.label]); T = float(max(inf[leaf.label] for leaf in leaves)); links = dict()
+    for leaf in leaves:
+        links[leaf] = [[inf[leaf.label],0]]; visited = set(); to_explore = deque(); to_explore.append((0,leaf))
+        while len(to_explore) != 0:
+            dist,curr = to_explore.popleft(); visited.add(curr)
+            if curr.is_leaf() and curr in links and curr != leaf:
+                links[leaf][-1][1] += 1
+                if links[curr][-1][0] != inf[leaf.label]:
+                    links[curr].append([inf[leaf.label],links[curr][-1][1]])
+                links[curr][-1][1] += 1
+            if curr.parent is not None and curr.parent not in visited and dist + curr.edge_length <= THRESH:
+                to_explore.append((dist+curr.edge_length,curr.parent))
+            for c in curr.children:
+                if c not in visited and dist + c.edge_length <= THRESH:
+                    to_explore.append((dist+c.edge_length,c))
+    score = dict()
+    for leaf in leaves:
+        # end gradient of number of links function
+        if links[leaf][-1][1] == 0: # no links
+            rate = 1./inf[leaf.label]
+        elif links[leaf][-1][0] == T: # last link time is end time
+            rate = float('inf')
+        else:
+            rate = 1./(T-links[leaf][-1][0])
+        score[leaf.label] = (rate,links[leaf][-1][1]) # first sort by rate, then by number of links
+    return sorted(score.keys(), key=lambda x: score[x], reverse=True)[:n]
+
+
+# test
+def test_old(tree,inf,n):
     THRESH = 0.015
     assert tree is not None, NEED_TREE_ERROR
     assert inf is not None, NEED_INF_ERROR
@@ -43,7 +77,7 @@ def test(tree,inf,n):
             grad[leaf] = 0
         else:
             grad[leaf] = (num_links[leaf][-1][1]-num_links[leaf][-2][1]) / (num_links[leaf][-1][0]-num_links[leaf][-2][0])
-    return [l.label for l in sorted(leaves_old_to_new, key=lambda x: grad[x], reverse=True)[:n]]
+    return [l.label for l in sorted(leaves_old_to_new, key=lambda x: (grad[x],-inf[x.label]), reverse=True)[:n]]
 
 # sort by average time delta between you and your sibling's leaf descendants
 def average_delta(tree,inf,n):
