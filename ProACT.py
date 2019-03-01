@@ -40,7 +40,10 @@ def test(tree,inf,n):
     for leaf in leaves:
         # end gradient of number of links function
         if links[leaf][-1][1] == 0: # no links
-            rate = 1./inf[leaf.label]
+            if inf[leaf.label] == 0:
+                rate = float('inf')
+            else:
+                rate = 1./inf[leaf.label]
         elif links[leaf][-1][0] == T: # last link time is end time
             rate = float('inf')
         else:
