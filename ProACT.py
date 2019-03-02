@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from collections import deque
+from copy import copy
 from numpy import gradient
 from treeswift import read_tree_newick,Node
 from random import shuffle
@@ -16,9 +17,30 @@ UNUSED_INF_WARNING = "User specified diagnosis time file, but it will be ignored
 NEED_INF_ERROR = "No diagnosis time file specified, but it is needed for this method"
 INVALID_DATE = "Invalid date. Dates must be floats/integers"
 
-# new test
+# test function
 def test(tree,inf,n):
-    THRESH = 0.018
+    assert tree is not None, NEED_TREE_ERROR
+    assert inf is not None, NEED_INF_ERROR
+    leaves = sorted(list(tree.traverse_leaves()), key=lambda x:inf[x.label]); T = float(max(inf[leaf.label] for leaf in leaves)); dm = tree.distance_matrix(); wlinks = dict()
+    for i in range(len(leaves)):
+        u = leaves[i]; t = inf[u.label]; wlinks[u] = [[t],[0.]] # wlinks[u][0] = list of times, wlinks[u][1] = list of weighted links
+        for j in range(i):
+            v = leaves[j]; s = 1.-dm[u][v]
+            if t > wlinks[v][0][-1]:
+                wlinks[v][0].append(t); wlinks[v][1].append(wlinks[v][1][-1])
+            wlinks[v][1][-1] += s; wlinks[u][1][-1] += s
+    score = dict()
+    for leaf in leaves:
+        if len(wlinks[leaf][0]) == 1: # only end time = infinite growth rate
+            rate = float('inf')
+        else:
+            rate = gradient(wlinks[leaf][1],wlinks[leaf][0])[-1]
+        score[leaf.label] = (rate,wlinks[leaf][1][-1])
+    return sorted(score.keys(), key=lambda x: score[x], reverse=True)
+
+# sort people by the final slope of the "number of links vs. time" function
+def num_links_slope(tree,inf,n):
+    THRESH = 0.017
     assert tree is not None, NEED_TREE_ERROR
     assert inf is not None, NEED_INF_ERROR
     leaves = sorted(list(tree.traverse_leaves()), key=lambda x:inf[x.label]); T = float(max(inf[leaf.label] for leaf in leaves)); links = dict()
@@ -50,37 +72,6 @@ def test(tree,inf,n):
             rate = 1./(T-links[leaf][-1][0])
         score[leaf.label] = (rate,links[leaf][-1][1]) # first sort by rate, then by number of links
     return sorted(score.keys(), key=lambda x: score[x], reverse=True)[:n]
-
-
-# test
-def test_old(tree,inf,n):
-    THRESH = 0.015
-    assert tree is not None, NEED_TREE_ERROR
-    assert inf is not None, NEED_INF_ERROR
-    leaves_old_to_new = sorted(list(tree.traverse_leaves()), key=lambda x:inf[x.label])
-    num_links = dict()
-    for leaf in leaves_old_to_new:
-        t = inf[leaf.label]; num_links[leaf] = [[t,0]]
-        visited = set(); to_explore = Queue(); to_explore.put((0,leaf))
-        while not to_explore.empty():
-            dist,curr = to_explore.get(); visited.add(curr)
-            if curr.is_leaf() and curr in num_links and curr != leaf:
-                num_links[leaf][-1][1] += 1
-                if num_links[curr][-1][0] != t:
-                    num_links[curr].append([t,num_links[curr][-1][1]])
-                num_links[curr][-1][1] += 1
-            if curr.parent is not None and curr.parent not in visited and dist + curr.edge_length <= THRESH:
-                to_explore.put((dist+curr.edge_length,curr.parent))
-            for c in curr.children:
-                if c not in visited and dist + c.edge_length <= THRESH:
-                    to_explore.put((dist+c.edge_length,c))
-    grad = dict()
-    for leaf in leaves_old_to_new:
-        if len(num_links[leaf]) == 1:
-            grad[leaf] = 0
-        else:
-            grad[leaf] = (num_links[leaf][-1][1]-num_links[leaf][-2][1]) / (num_links[leaf][-1][0]-num_links[leaf][-2][0])
-    return [l.label for l in sorted(leaves_old_to_new, key=lambda x: (grad[x],-inf[x.label]), reverse=True)[:n]]
 
 # sort by average time delta between you and your sibling's leaf descendants
 def average_delta(tree,inf,n):
@@ -232,7 +223,7 @@ def min_root_dist(tree,inf,n):
 
 # run ProACT
 METHODS = {
-    'DEFAULT': 'test',
+    'DEFAULT': 'num_links_slope',
     'average_delta':average_delta,
     'average_max_inf_all':average_max_inf_all,
     'average_max_inf_internal':average_max_inf_internal,
@@ -243,6 +234,7 @@ METHODS = {
     'min_inf':min_inf,
     'max_root_dist':max_root_dist,
     'min_root_dist':min_root_dist,
+    'num_links_slope':num_links_slope,
     'random':random_select,
     'test':test
 }
