@@ -22,18 +22,24 @@ avg = lambda x: sum(x)/len(x)
 def test(tree,inf,n):
     assert tree is not None, NEED_TREE_ERROR
     assert inf is not None, NEED_INF_ERROR
-    leaves = list(); root_to_tips = list()
+    leaves = list(); root_to_tips = list(); root_to_tips_u = list()
+    for u in tree.traverse_postorder():
+        if u.is_leaf():
+            u.num_leaves = 1
+        else:
+            u.num_leaves = sum(c.num_leaves for c in u.children)
     for u in tree.traverse_preorder():
         if u.is_root():
-            u.root_dist = 0
+            u.root_dist = 0; u.root_dist_u = 0
         elif u.edge_length is None:
-            u.root_dist = u.parent.root_dist
+            u.root_dist = u.parent.root_dist; u.root_dist_u = u.parent.root_dist_u + 1
         else:
-            u.root_dist = u.parent.root_dist + u.edge_length
+            u.root_dist = u.parent.root_dist + u.edge_length; u.root_dist_u = u.parent.root_dist_u + 1
         if u.is_leaf():
-            leaves.append(u); root_to_tips.append(u.root_dist)
-    score = dict(); avg_root_to_tip = avg(root_to_tips)
-    score = {u.label: (u.edge_length, abs(u.root_dist - avg_root_to_tip)) for u in leaves}
+            u.num_sibling_leaves = sum(c.num_leaves for c in u.parent.children if c != u)
+            leaves.append(u); root_to_tips.append(u.root_dist); root_to_tips_u.append(u.root_dist_u)
+    avg_root_to_tip = avg(root_to_tips); avg_root_to_tip_u = avg(root_to_tips_u)
+    score = {u.label: (u.edge_length, abs(u.root_dist - avg_root_to_tip)) for u in leaves} # sort by edge length, then by absolute value of root-to-tip distance - average
     return sorted(score.keys(), key=lambda x: score[x])[:n]
 
 # sort people by the final slope of the "number of links vs. time" function
