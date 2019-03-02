@@ -16,27 +16,25 @@ NEED_TREE_ERROR = "No tree file specified, but it is needed for this method"
 UNUSED_INF_WARNING = "User specified diagnosis time file, but it will be ignored in this method"
 NEED_INF_ERROR = "No diagnosis time file specified, but it is needed for this method"
 INVALID_DATE = "Invalid date. Dates must be floats/integers"
+avg = lambda x: sum(x)/len(x)
 
 # test function
 def test(tree,inf,n):
     assert tree is not None, NEED_TREE_ERROR
     assert inf is not None, NEED_INF_ERROR
-    leaves = sorted(list(tree.traverse_leaves()), key=lambda x:inf[x.label]); T = float(max(inf[leaf.label] for leaf in leaves)); dm = tree.distance_matrix(); wlinks = dict()
-    for i in range(len(leaves)):
-        u = leaves[i]; t = inf[u.label]; wlinks[u] = [[t],[0.]] # wlinks[u][0] = list of times, wlinks[u][1] = list of weighted links
-        for j in range(i):
-            v = leaves[j]; s = 1.-dm[u][v]
-            if t > wlinks[v][0][-1]:
-                wlinks[v][0].append(t); wlinks[v][1].append(wlinks[v][1][-1])
-            wlinks[v][1][-1] += s; wlinks[u][1][-1] += s
-    score = dict()
-    for leaf in leaves:
-        if len(wlinks[leaf][0]) == 1: # only end time = infinite growth rate
-            rate = float('inf')
+    leaves = list(); root_to_tips = list()
+    for u in tree.traverse_preorder():
+        if u.is_root():
+            u.root_dist = 0
+        elif u.edge_length is None:
+            u.root_dist = u.parent.root_dist
         else:
-            rate = gradient(wlinks[leaf][1],wlinks[leaf][0])[-1]
-        score[leaf.label] = (rate,wlinks[leaf][1][-1])
-    return sorted(score.keys(), key=lambda x: score[x], reverse=True)
+            u.root_dist = u.parent.root_dist + u.edge_length
+        if u.is_leaf():
+            leaves.append(u); root_to_tips.append(u.root_dist)
+    score = dict(); avg_root_to_tip = avg(root_to_tips)
+    score = {u.label: (u.edge_length, abs(u.root_dist - avg_root_to_tip)) for u in leaves}
+    return sorted(score.keys(), key=lambda x: score[x])[:n]
 
 # sort people by the final slope of the "number of links vs. time" function
 def num_links_slope(tree,inf,n):
