@@ -41,7 +41,7 @@ def test(tree,inf,n):
             u.num_sibling_leaves = sum(c.num_leaves for c in u.parent.children if c != u)
             leaves.append(u); root_to_tips.append(u.root_dist); root_to_tips_u.append(u.root_dist_u)
     avg_root_to_tip = avg(root_to_tips); avg_root_to_tip_u = avg(root_to_tips_u)
-    score = {u.label: (u.edge_length, abs(u.root_dist - avg_root_to_tip)) for u in leaves} # sort by edge length, then by absolute value of root-to-tip distance - average
+    score = {u.label: (u.edge_length, u.root_dist/u.root_dist_u) for u in leaves} # sort by edge length, then by weighted/unweighted root-to-tip distance
     return sorted(score.keys(), key=lambda x: score[x])[:n]
 
 # sort people by the final slope of the "number of links vs. time" function
