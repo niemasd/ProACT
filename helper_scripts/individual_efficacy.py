@@ -3,59 +3,18 @@
 Compute clustering efficacy (average number of individuals infected by
 user-selected individuals between from_time and to_time).
 '''
-from gzip import open as gopen
+from common import individual_efficacy,load_individuals,load_transmissions
 import argparse
-parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('-i', '--individuals', required=False, type=str, default='stdin', help="Individuals (one per line)")
-parser.add_argument('-tn', '--transmissions', required=True, type=str, help="Transmission Network (FAVITES format)")
-parser.add_argument('-t', '--from_time', required=True, type=float, help="From Time")
-parser.add_argument('-tt', '--to_time', required=False, type=float, default=float('inf'), help="To Time")
 
-args = parser.parse_args()
-assert args.to_time > args.from_time, "To Time must be larger than From Time"
-if args.individuals == 'stdin':
-    from sys import stdin; args.individuals = stdin.read().strip().splitlines()
-elif args.individuals.endswith('.gz'):
-    args.individuals = gopen(args.individuals).read().strip().decode().splitlines()
-else:
-    args.individuals = open(args.individuals).read().strip().splitlines()
-if args.transmissions.endswith('.gz'):
-    args.transmissions = gopen(args.transmissions).read().strip().decode().splitlines()
-else:
-    args.transmissions = open(args.transmissions).read().strip().splitlines()
-
-# load FAVITES transmission network
-trans = []; nodes = set()
-for line in args.transmissions:
-    if isinstance(line,bytes):
-        l = line.decode().strip()
-    else:
-        l = line.strip()
-    try:
-        u,v,t = l.split(); t = float(t)
-    except:
-        raise RuntimeError("Invalid transmission network")
-    if u not in nodes:
-        nodes.add(u)
-    if v not in nodes:
-        nodes.add(v)
-    trans.append((u,v,t))
-
-# load user's individuals
-user_individuals = list(); eff = dict()
-for line in args.individuals:
-    if isinstance(line,bytes):
-        l = line.decode().strip()
-    else:
-        l = line.strip()
-    if l.count('|') == 2: # virus|person|time identifiers
-        l = l.split('|')[1]
-    assert l in nodes, "Individual not in transmission network: %s"%l
-    user_individuals.append(l); eff[l] = 0
-
-# compute number infected
-for u,v,t in trans:
-    if t >= args.from_time and t <= args.to_time and u in eff:
-        eff[u] += 1
-for u in user_individuals:
-    print('%s\t%d'%(u,eff[u]))
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-i', '--individuals', required=False, type=str, default='stdin', help="Individuals (one per line)")
+    parser.add_argument('-tn', '--transmissions', required=True, type=str, help="Transmission Network (FAVITES format)")
+    parser.add_argument('-t', '--from_time', required=True, type=float, help="From Time")
+    parser.add_argument('-tt', '--to_time', required=False, type=float, default=float('inf'), help="To Time")
+    args = parser.parse_args()
+    trans = load_transmissions(args.transmissions)
+    user_individuals = load_individuals(args.individuals)
+    eff = individual_efficacy(user_individuals,trans,args.from_time,args.to_time)
+    for u in user_individuals:
+        print('%s\t%d'%(u,eff[u]))
