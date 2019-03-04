@@ -16,7 +16,9 @@ NEED_TREE_ERROR = "No tree file specified, but it is needed for this method"
 UNUSED_INF_WARNING = "User specified diagnosis time file, but it will be ignored in this method"
 NEED_INF_ERROR = "No diagnosis time file specified, but it is needed for this method"
 INVALID_DATE = "Invalid date. Dates must be floats/integers"
-avg = lambda x: sum(x)/len(x)
+
+def avg(x):
+    xl = list(x); return sum(xl)/len(xl)
 
 # test function
 def test(tree,inf,n):
