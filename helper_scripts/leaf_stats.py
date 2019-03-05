@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-from common import individual_efficacy,leaf_to_name,load_transmissions
+from common import individual_efficacy,leaf_to_name,load_diag_times,load_transmissions
 from treeswift import read_tree_newick
 import argparse
-ORDER = ['name', 'efficacy', 'edge_length', 'root_to_tip', 'root_to_tip_u', 'sib_leaves', 'closest_leaf']
+ORDER = ['name', 'diagnosis', 'efficacy', 'edge_length', 'root_to_tip', 'root_to_tip_u', 'sib_leaves', 'closest_leaf']
 
 def compute_sib_leaves(tree):
     num_leaves = dict()
@@ -55,6 +55,7 @@ def compute_vals(tree):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-tr', '--tree', required=True, type=str, help="Phylogenetic Tree (Newick format)")
+    parser.add_argument('-d', '--diagnosis', required=True, type=str, help="Diagnosis Times File")
     parser.add_argument('-tn', '--transmissions', required=True, type=str, help="Transmission Network (FAVITES format)")
     parser.add_argument('-t', '--from_time', required=True, type=float, help="From Time (for # transmissions)")
     parser.add_argument('-tt', '--to_time', required=False, type=float, default=float('inf'), help="To Time (for # transmissions)")
@@ -64,6 +65,7 @@ if __name__ == "__main__":
     vals = compute_vals(tree)
     vals['name'] = {L2N[l]:L2N[l] for l in L2N}
     vals['efficacy'] = individual_efficacy([L2N[l] for l in tree.traverse_leaves()],load_transmissions(args.transmissions),args.from_time,args.to_time)
+    vals['diagnosis'] = load_diag_times(args.diagnosis)
     print(','.join(ORDER))
     for l in L2N:
         print(','.join(str(vals[k][L2N[l]]) for k in ORDER))
