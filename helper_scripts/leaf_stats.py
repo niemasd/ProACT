@@ -2,7 +2,7 @@
 from common import individual_efficacy,leaf_to_name,load_transmissions
 from treeswift import read_tree_newick
 import argparse
-ORDER = ['name', 'efficacy', 'edge_length', 'root_to_tip', 'root_to_tip_u', 'sib_leaves']
+ORDER = ['name', 'efficacy', 'edge_length', 'root_to_tip', 'root_to_tip_u', 'sib_leaves', 'closest_leaf']
 
 def compute_sib_leaves(tree):
     num_leaves = dict()
@@ -26,12 +26,30 @@ def compute_root_to_tip(tree, weighted=True):
             root_to_tip[u] = root_to_tip[u.parent] + u.edge_length
     return {L2N[l]:root_to_tip[l] for l in L2N}
 
+def compute_closest_leaf(tree):
+    closest_below = dict()
+    for u in tree.traverse_postorder():
+        if u.is_leaf():
+            closest_below[u] = 0
+        else:
+            closest_below[u] = min(closest_below[c]+c.edge_length for c in u.children)
+    closest_above = dict()
+    for u in tree.traverse_preorder():
+        if u.is_root():
+            closest_above[u] = float('inf')
+        else:
+            closest_above[u] = min(closest_above[u.parent], min(closest_below[c] for c in u.parent.children if c != u))
+            if u.edge_length is not None:
+                closest_above[u] += u.edge_length
+    return {L2N[l]:closest_above[l] for l in L2N}
+
 def compute_vals(tree):
     vals = dict()
     vals['sib_leaves'] = compute_sib_leaves(tree)
     vals['edge_length'] = {L2N[l]:l.edge_length for l in L2N}
     vals['root_to_tip'] = compute_root_to_tip(tree, weighted=True)
     vals['root_to_tip_u'] = compute_root_to_tip(tree, weighted=False)
+    vals['closest_leaf'] = compute_closest_leaf(tree)
     return vals
 
 if __name__ == "__main__":
@@ -48,4 +66,4 @@ if __name__ == "__main__":
     vals['efficacy'] = individual_efficacy([L2N[l] for l in tree.traverse_leaves()],load_transmissions(args.transmissions),args.from_time,args.to_time)
     print(','.join(ORDER))
     for l in L2N:
-        ln = L2N[l]; print('%s,%d,%f,%f,%d,%d' % tuple(vals[k][ln] for k in ORDER))
+        print(','.join(str(vals[k][L2N[l]]) for k in ORDER))
