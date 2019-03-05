@@ -6,6 +6,7 @@ from treeswift import read_tree_newick,Node
 from random import shuffle
 from queue import PriorityQueue,Queue
 from scipy.stats import norm
+from sys import stderr
 from warnings import warn
 import heapq
 USE_TREE_WARNING = "Only tree file will be used"
@@ -20,16 +21,10 @@ INVALID_DATE = "Invalid date. Dates must be floats/integers"
 def avg(x):
     xl = list(x); return sum(xl)/len(xl)
 
-# test function
-def test(tree,inf,n):
+# sort by edge length, then by weighted/unweighted root-to-tip distance
+def edgelength_norm_root_to_tip(tree,inf,n):
     assert tree is not None, NEED_TREE_ERROR
-    assert inf is not None, NEED_INF_ERROR
     leaves = list(); root_to_tips = list(); root_to_tips_u = list()
-    for u in tree.traverse_postorder():
-        if u.is_leaf():
-            u.num_leaves = 1
-        else:
-            u.num_leaves = sum(c.num_leaves for c in u.children)
     for u in tree.traverse_preorder():
         if u.is_root():
             u.root_dist = 0; u.root_dist_u = 0
@@ -38,7 +33,6 @@ def test(tree,inf,n):
         else:
             u.root_dist = u.parent.root_dist + u.edge_length; u.root_dist_u = u.parent.root_dist_u + 1
         if u.is_leaf():
-            u.num_sibling_leaves = sum(c.num_leaves for c in u.parent.children if c != u)
             leaves.append(u); root_to_tips.append(u.root_dist); root_to_tips_u.append(u.root_dist_u)
     avg_root_to_tip = avg(root_to_tips); avg_root_to_tip_u = avg(root_to_tips_u)
     score = {u.label: (u.edge_length, u.root_dist/u.root_dist_u) for u in leaves} # sort by edge length, then by weighted/unweighted root-to-tip distance
@@ -229,12 +223,13 @@ def min_root_dist(tree,inf,n):
 
 # run ProACT
 METHODS = {
-    'DEFAULT': 'num_links_slope',
+    'DEFAULT': 'edgelength_norm_root_to_tip',
     'average_delta':average_delta,
     'average_max_inf_all':average_max_inf_all,
     'average_max_inf_internal':average_max_inf_internal,
     'average_min_inf_all':average_min_inf_all,
     'average_min_inf_internal':average_min_inf_internal,
+    'edgelength_norm_root_to_tip':edgelength_norm_root_to_tip,
     'feedback':feedback,
     'max_inf':max_inf,
     'min_inf':min_inf,
@@ -242,7 +237,6 @@ METHODS = {
     'min_root_dist':min_root_dist,
     'num_links_slope':num_links_slope,
     'random':random_select,
-    'test':test
 }
 if __name__ == "__main__":
     import argparse; from gzip import open as gopen
