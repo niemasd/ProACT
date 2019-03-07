@@ -13,6 +13,15 @@ def read_lines(filename):
     else:
         return [l.strip() for l in open(filename).read().strip().splitlines()]
 
+def load_diag_times(filename):
+    diag = dict()
+    for l in read_lines(filename):
+        u,t = l.strip().split('\t')
+        if u.count('|') == 2: # virus|person|time identifiers
+            u = u.split('|')[1]
+        diag[u] = float(t)
+    return diag
+
 def load_transmissions(filename):
     trans = []; nodes = set()
     for l in read_lines(filename):
@@ -23,14 +32,29 @@ def load_transmissions(filename):
         trans.append((u,v,t))
     return trans
 
-def load_individuals(filename):
+def individuals_from_lines(lines):
     people = list()
-    for l in read_lines(filename):
+    for l in lines:
         if l.count('|') == 2: # virus|person|time identifiers
             people.append(l.split('|')[1])
         else:
             people.append(l)
     return people
+
+def leaf_to_name(tree):
+    tr = dict()
+    for l in tree.traverse_leaves():
+        if l.label.count('|') == 2: # virus|person|time identifiers
+            tr[l] = l.label.split('|')[1]
+        else:
+            tr[l] = l.label
+    return tr
+
+def load_individuals(filename):
+    return individuals_from_lines(read_lines(filename))
+
+def individuals_from_tree(tree):
+    return individuals_from_lines([l.label for l in tree.traverse_leaves()])
 
 def individual_efficacy(user_individuals,transmissions,from_time,to_time):
     assert to_time > from_time, "To Time must be larger than From Time"
@@ -42,3 +66,6 @@ def individual_efficacy(user_individuals,transmissions,from_time,to_time):
     for u in eff:
         assert u in trans_nodes, "Individual not in transmission network: %s"%u
     return eff
+
+def optimal_order(individuals,eff):
+    return sorted(individuals, key=lambda x: eff[x], reverse=True)
