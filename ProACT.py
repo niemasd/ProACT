@@ -25,16 +25,15 @@ def test(tree,inf,n):
     assert tree is not None, NEED_TREE_ERROR
     assert inf is not None, NEED_INF_ERROR
     leaves = list()
-    for u in tree.traverse_preorder():
-        if u.is_root():
-            u.root_dist = 0
-        elif u.edge_length is None:
-            u.root_dist = u.parent.root_dist; u.root_dist_u = u.parent.root_dist_u + 1
-        else:
-            u.root_dist = u.parent.root_dist + u.edge_length; u.root_dist_u = u.parent.root_dist_u + 1
+    for u in tree.traverse_postorder():
         if u.is_leaf():
-            leaves.append(u)
-    score = {u.label: (u.edge_length, inf[u.label]) for u in leaves} # sort by edge length, then by sample time
+            u.min_inf = inf[u.label]; u.max_inf = inf[u.label]; leaves.append(u)
+        else:
+            u.min_inf = min(c.min_inf for c in u.children); u.max_inf = max(c.max_inf for c in u.children)
+    for u in leaves:
+        u.min_sib_inf = min(c.min_inf for c in u.parent.children if c != u)
+        u.max_sib_inf = max(c.max_inf for c in u.parent.children if c != u)
+    score = {u.label: (u.edge_length, inf[u.label]-u.max_sib_inf) for u in leaves} # sort by edge length, then by sample time
     return sorted(score.keys(), key=lambda x: score[x])[:n]
 
 # sort by edge length, then by weighted/unweighted root-to-tip distance
