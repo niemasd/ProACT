@@ -21,10 +21,26 @@ INVALID_DATE = "Invalid date. Dates must be floats/integers"
 def avg(x):
     xl = list(x); return sum(xl)/len(xl)
 
+def test(tree,inf,n):
+    assert tree is not None, NEED_TREE_ERROR
+    assert inf is not None, NEED_INF_ERROR
+    leaves = list()
+    for u in tree.traverse_preorder():
+        if u.is_root():
+            u.root_dist = 0
+        elif u.edge_length is None:
+            u.root_dist = u.parent.root_dist; u.root_dist_u = u.parent.root_dist_u + 1
+        else:
+            u.root_dist = u.parent.root_dist + u.edge_length; u.root_dist_u = u.parent.root_dist_u + 1
+        if u.is_leaf():
+            leaves.append(u)
+    score = {u.label: (u.edge_length, inf[u.label]) for u in leaves} # sort by edge length, then by sample time
+    return sorted(score.keys(), key=lambda x: score[x])[:n]
+
 # sort by edge length, then by weighted/unweighted root-to-tip distance
 def edgelength_norm_root_to_tip(tree,inf,n):
     assert tree is not None, NEED_TREE_ERROR
-    leaves = list(); root_to_tips = list(); root_to_tips_u = list()
+    leaves = list()
     for u in tree.traverse_preorder():
         if u.is_root():
             u.root_dist = 0; u.root_dist_u = 0
@@ -33,8 +49,7 @@ def edgelength_norm_root_to_tip(tree,inf,n):
         else:
             u.root_dist = u.parent.root_dist + u.edge_length; u.root_dist_u = u.parent.root_dist_u + 1
         if u.is_leaf():
-            leaves.append(u); root_to_tips.append(u.root_dist); root_to_tips_u.append(u.root_dist_u)
-    avg_root_to_tip = avg(root_to_tips); avg_root_to_tip_u = avg(root_to_tips_u)
+            leaves.append(u)
     score = {u.label: (u.edge_length, u.root_dist/u.root_dist_u) for u in leaves} # sort by edge length, then by weighted/unweighted root-to-tip distance
     return sorted(score.keys(), key=lambda x: score[x])[:n]
 
@@ -237,6 +252,7 @@ METHODS = {
     'min_root_dist':min_root_dist,
     'num_links_slope':num_links_slope,
     'random':random_select,
+    'test':test,
 }
 if __name__ == "__main__":
     import argparse; from gzip import open as gopen
