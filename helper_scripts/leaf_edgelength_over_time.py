@@ -68,12 +68,13 @@ def edgelength_over_time(tree,inf): # each element in list for a given leaf is (
     return {l:el_t[l][::-1] for l in el_t}
 
 def plot_edgelength_over_time(el_t,eff,max_num_lines):
-    if max_num_lines is None:
-        max_num_lines = len(el_t)
-    min_eff = min(eff.values()); max_eff = max(eff.values()); max_time = max(el_t[l][-1][0] for l in el_t)
+    leaves = sorted(el_t.keys(), key=lambda a: eff[L2N[a]])
+    if max_num_lines is not None:
+        leaves = leaves[-max_num_lines:]
+    min_eff = min(eff[L2N[l]] for l in leaves); max_eff = max(eff[L2N[l]] for l in leaves); max_time = max(el_t[l][-1][0] for l in leaves)
     norm = Normalize(vmin=min_eff, vmax=max_eff, clip=True); color_mapper = ScalarMappable(norm=norm, cmap=Reds)
     handles = [Patch(color=color_mapper.to_rgba(e), label='%d Transmission(s)'%e) for e in (min_eff,max_eff)]
-    for l in sorted(el_t.keys(), key=lambda a: eff[L2N[a]])[-max_num_lines:]:
+    for l in leaves:
         pairs = el_t[l]
         x = [pairs[0][0]]; y = [pairs[0][1]] # start (just a point)
         for t,el in pairs[1:]:
