@@ -32,6 +32,18 @@ def load_transmissions(filename):
         trans.append((u,v,t))
     return trans
 
+def load_diagnosis(filename):
+    diag = dict()
+    for l in read_lines(filename):
+        try:
+            u,t = l.split(); t = float(t)
+        except:
+            raise RuntimeError("Invalid diagnosis time file (not TSV)")
+        if u.count('|') == 2: # virus|person|time identifiers
+            u = u.split('|')[1]
+        diag[u] = t
+    return diag
+
 def individuals_from_lines(lines):
     people = list()
     for l in lines:
