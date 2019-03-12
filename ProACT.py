@@ -5,24 +5,43 @@ from warnings import warn
 # sort by edge length, then parent edge length, then grandparent edge length, etc.
 def prioritize(tree,n):
     # compute path-length to root
-    leaves = list(); root_dist = dict()#; root_dist_u = dict()
+    leaves = list(); root_dist = dict()
     for u in tree.traverse_preorder():
+        if u.is_leaf():
+            leaves.append(u)
         if u.is_root():
-            root_dist[u] = 0#; root_dist_u[u] = 0
+            root_dist[u] = 0
         else:
             if u.edge_length is None:
                 u.edge_length = 0
-            root_dist[u] = root_dist[u.parent] + u.edge_length#; root_dist_u[u] = root_dist_u[u.parent] + 1
-        if u.is_leaf():
-            leaves.append(u)
-    avg_root_dist = sum(root_dist[u] for u in leaves)/len(leaves)
+            root_dist[u] = root_dist[u.parent] + u.edge_length
     if n == 'All':
         n = len(leaves)
     else:
         n = int(n)
     if n < 0 or n > len(leaves):
         raise ValueError("Number of output individuals (%d) must be less than or equal to total number of individuals in tree (%d)" % (n,len(leaves)))
-    return [l.label for l in sorted(leaves, key=lambda x: (x.edge_length, abs(root_dist[x]-avg_root_dist)))[:n]]
+    # sort by edge length, then parent edge length, then grandparent edge length, etc. (use dist to root once ancestors run out)
+    def compare(l1,l2):
+        l1r = root_dist[l1]; l2r = root_dist[l2]
+        c1 = l1; c2 = l2
+        c1l = c1.edge_length; c2l = c2.edge_length
+        while c1l == c2l:
+            if c1 is None and c2 is None:
+                return False
+            if c1 is not None:
+                if c1.parent is None:
+                    c1l = l1r; c1 = None
+                else:
+                    c1 = c1.parent; c1l = c1.edge_length
+            if c2 is not None:
+                if c2.parent is None:
+                    c2l = l2r; c2 = None
+                else:
+                    c2 = c2.parent; c2l = c2.edge_length
+        return c1l < c2l
+    Node.__lt__ = lambda self,other: compare(self,other)
+    return [l.label for l in sorted(leaves)[:n]]
 
 # run ProACT
 if __name__ == "__main__":
