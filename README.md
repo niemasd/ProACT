@@ -1,2 +1,2 @@
 # ProACT
-Prioritization using Average Clade Times
+**Pr**i**o**ritization using **A**n**c**es**t**ral edge lengths
