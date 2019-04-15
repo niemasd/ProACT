@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+from gzip import open as gopen
 from treeswift import read_tree_newick,Node
 from warnings import warn
 
 # sort by edge length, then parent edge length, then grandparent edge length, etc.
-def prioritize(tree,n):
+def prioritize(tree,n,diag=None):
     # compute path-length to root
     leaves = list(); root_dist = dict(); num_ancestors = dict()
     for u in tree.traverse_preorder():
@@ -29,7 +30,10 @@ def prioritize(tree,n):
         c1l = c1.edge_length; c2l = c2.edge_length
         while c1l == c2l:
             if c1 is None and c2 is None:
-                return False
+                if diag is None:
+                    return l1.label < l2.label
+                else:
+                    return diag[l1.label] < diag[l2.label]
             if c1 is not None:
                 if c1.parent is None:
                     c1l = tie1; c1 = None
@@ -44,11 +48,22 @@ def prioritize(tree,n):
     Node.__lt__ = lambda self,other: compare(self,other)
     return [l.label for l in sorted(leaves)[:n]]
 
+def read_diagnosis(filename):
+    if filename.lower().endswith('.gz'):
+        lines = gopen(filename).read().decode().strip().splitlines()
+    else:
+        lines = open(filename).read().strip().splitlines()
+    diag = dict()
+    for l in lines:
+        u,t = l.split('\t'); diag[u.strip()] = float(t)
+    return diag
+
 # run ProACT
 if __name__ == "__main__":
-    import argparse; from gzip import open as gopen
+    import argparse
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-t', '--tree', required=True, type=str, help="Input Tree File")
+    parser.add_argument('-t', '--tree', required=True, type=str, help="Input Tree File (Newick format)")
+    parser.add_argument('-d', '--diagnosis', required=False, type=str, default=None, help="Diagnosis File (TSV format)")
     parser.add_argument('-n', '--number', required=False, type=str, default='All', help="Number of Individuals")
     parser.add_argument('-o', '--output', required=False, type=str, default='stdout', help="Output File")
     args = parser.parse_args()
@@ -57,5 +72,10 @@ if __name__ == "__main__":
     else:
         output = open(args.output,'w')
     tree = read_tree_newick(args.tree)
-    for u in prioritize(tree,args.number):
+    if args.diagnosis is not None:
+        args.diagnosis = read_diagnosis(args.diagnosis)
+        for l in tree.traverse_leaves():
+            if l.label not in args.diagnosis:
+                raise RuntimeError("Diagnosis file is missing time for individual: %s" % l.label)
+    for u in prioritize(tree,args.number,args.diagnosis):
         output.write(u); output.write('\n')
