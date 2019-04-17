@@ -7,19 +7,6 @@ from treeswift import read_tree_newick
 import argparse
 import matplotlib.pyplot as plt
 
-def compute_root_to_tip(tree, weighted=True):
-    root_to_tip = dict()
-    for u in tree.traverse_preorder():
-        if u.is_root():
-            root_to_tip[u] = 0
-        elif not weighted:
-            root_to_tip[u] = root_to_tip[u.parent] + 1
-        elif u.edge_length is None:
-            root_to_tip[u] = root_to_tip[u.parent]
-        else:
-            root_to_tip[u] = root_to_tip[u.parent] + u.edge_length
-    return {L2N[l]:root_to_tip[l] for l in L2N}
-
 def compute_max_sibling_leaf_time(tree,inf):
     max_inf = dict()
     for u in tree.traverse_postorder():
@@ -99,6 +86,5 @@ if __name__ == "__main__":
     diag = load_diagnosis(args.diagnosis)
     global L2N; L2N = leaf_to_name(tree)
     eff = individual_efficacy([L2N[l] for l in tree.traverse_leaves()],load_transmissions(args.transmissions),args.from_time,args.to_time)
-    root_to_tip = compute_root_to_tip(tree)
     el_t = edgelength_over_time(tree,diag)
     plot_edgelength_over_time(el_t,eff,args.max_num_lines)
